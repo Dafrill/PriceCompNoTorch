@@ -1,0 +1,541 @@
+---
+title: "Test Results - Kohonen WTA Network"
+author: "Magda"
+date: "2026-05-07"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(ggplot2)
+library(knitr)
+library(tidyr)
+library(dplyr)
+library(gridExtra)
+```
+
+# Kohonen Neural Network Test Results
+
+## Wstęp
+
+● Celem niniejszej pracy jest opracowanie oraz ocena modelu sieci neuronowej
+przeznaczonego do klasyfikacji spółek o podobnej dynamice wzrostu wchodzących w skład indeksu NASDAQ.
+● Zadaniem modelu będzie przypisanie spółki do odpowiedniej kategorii na podstawie jej
+historycznych notowań giełdowych.
+● Proces klasyfikacji zostanie oparty na wybranych cechach opisujących zachowanie kursu,
+takich jak nachylenie trendu czy odchylenie standardowe reszt modelu regresyjnego.
+● Dane wejściowe zostały pobrane z serwisu Yahoo Finance. Do analizy zostały użyte ceny
+zamknięcia spółek giełdowych (dzienne), notowanych na NASDAQ od przynajmniej 5-ciu lat.
+Analizowano notowania spółek z ostatnich 3000 dni, przy czym były to spółki obecne na
+giełdzie przynajmniej przez 5 lat.
+● W zbiorze uczącym znalazło się 1821 podmiotów, a w testowym 456
+● Należy rozróżnić spółki na podstawie tempa wzrostu notowań (zostanie wybrany i
+wyestymowany model najlepiej opisujący zmienność danych (liniowy, wykładniczy
+lub wielomianowy)
+
+## Problem mierzenia dokładności
+
+Jeśli klasy zostaną wprowadzone ręcznie, model może faworyzować niektóre parametry, I
+pomijać cechy danych, które są trudne do zauważenia, ale które mają znaczący wpływ na
+wyniki. W tym przypadku nie można ,,ręcznie’’ przypisać do danych pożądanych wyników
+klasyfikacji. Byłyby one nieobiektywne.
+● W konsekwencji, proces budowy modelu powinien wykorzystywać uczenie nienadzorowane:
+model sam podzieli spółki na sensowne grupy bez wcześniejszych założeń.
+
+Ponieważ dane nie mogą być ręcznie podzielone na klasy przed treningiem, sprawdzenie dokładności modelu nie może polegać na policzeniu odsetka poprawnych przyporządkowań do klas.
+Zamiast tego jako miary dokładności użyto wartości cosinusa kąta między zwycięskim neuronem a wektorem wejściowym (im lepsze dopasowanie, tym cosinus kąta jest bliżej 1 (wówczas kąt jest bliski 0)).
+
+
+## Parametry wejściowe wektora
+
+#### Pierwsza warstwa:
+ - trend = współczynnik kierunkowy × 100 (dla Linear/Exponential) lub pochodna w środku (dla Polynomial)
+   - mape = średni błąd procentowy: mean(|y_test - pred| / |y_test|) × 100
+   - q_slope = nachylenie między 1. a 3. kwartylem: (y_test[q3] - y_test[q1]) / (X_test[q3] - X_test[q1])
+   - curvature = 0 (Linear), b² (Exponential), c (współczynnik x² dla Polynomial)
+   - highest_p1..p5 = najwyższy punkt w każdym z 5 okresów (przesunięcie od środka okresu)
+   - rmse_p1..p5 = błąd RMSE w każdym z 5 okresów
+ 
+#### Druga warstwa:
+Bliskość danych z wektora wejsciowego do zwycięskiego neuronu z pierwszej warstwy, przekształcona przez funkcję aktywacji
+
+
+## Proces uczenia i architektura sieci
+
+Użyto sieci Kohenena, wektory są normalizowane.
+Podczas treningu aktualizowane są wagi jedynie zwycięskiego neuronu wg wzoru:
+ w_new = w_old + η · (x - w_old)
+ 
+## Poniżej zostały zaprezentowane wyniki dopasowania sieci w zależności od liczby neuronów w obu warstwach, szybkości zmiany współczynnika eta (learning rate), jego początkowej wartości, liczby epok, użytej funkcji aktywacji między 1 i 2 warstwą oraz sposobu podziału danych za zbiór uczący i testowy
+ 
+**Generation Date:** 2026-05-07 10:07:27
+
+## Series 1: Number of L1 Neurons (L2=5)
+
+### Cosine Similarity Comparison
+
+```{r}
+comp_s1_ <- data.frame(
+  NetworkType = c("1-layer", "1-layer", "1-layer", "1-layer", "1-layer", "2-layer", "2-layer", "2-layer", "2-layer", "2-layer"),
+  Param = c(10, 20, 40, 60, 80, 10, 20, 40, 60, 80),
+  TrainCosine = c(0.9702850408735755, 0.9779118026733127, 0.9822317566724508, 0.982837493451213, 0.9843148810796073, 0.953035435128986, 0.9658987487414616, 0.9725126215678264, 0.9734485608450371, 0.9764318772448843),
+  TrainCosineStd = c(0.0037912412270028313, 0.0015906266007685655, 0.001198912537499048, 0.0010037162013397305, 0.0007600855015428451, 0.006112870285325147, 0.005538010280985869, 0.004880116431088722, 0.003435603924893447, 0.0020943358547335605),
+  TestCosine = c(0.9673573019802735, 0.9748134631884875, 0.9793538821232254, 0.9800541421943049, 0.9812642590045109, 0.948958039358191, 0.9607920528156575, 0.9688225830778758, 0.9686566854381196, 0.97117631129573),
+  TestCosineStd = c(0.003281733359958971, 0.0015582839823916692, 0.0013966583349825687, 0.0013088703254169173, 0.000779508918469242, 0.004377800476310132, 0.006701922101953037, 0.004619389450721792, 0.0035653356942296284, 0.002903838766832576)
+)
+kable(comp_s1_, digits = 4, caption = 'Comparison: 1-Layer vs 2-Layer Networks')
+```
+
+### Train vs Test: Num of L1 neurons
+
+```{r, fig.width=12, fig.height=5}
+
+# 1-Layer Network plot
+comp_s1__l1 <- data.frame(
+  Param = c(10, 20, 40, 60, 80),
+  TrainCosine = c(0.9702850408735755, 0.9779118026733127, 0.9822317566724508, 0.982837493451213, 0.9843148810796073),
+  TestCosine = c(0.9673573019802735, 0.9748134631884875, 0.9793538821232254, 0.9800541421943049, 0.9812642590045109)
+)
+comp_s1__l1_long <- pivot_longer(comp_s1__l1, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s1__l1_long$Metric <- factor(comp_s1__l1_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l1 <- min(comp_s1__l1_long$Value) - 0.005
+cos_max_l1 <- max(comp_s1__l1_long$Value) + 0.002
+plot_l1 <- ggplot(comp_s1__l1_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l1, cos_max_l1)) +
+  labs(x = 'L1', y = 'Cosine Similarity', title = '1-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#1F77B4', 'Test' = '#FF7F0E')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+# 2-Layer Network plot
+comp_s1__l2 <- data.frame(
+  Param = c(10, 20, 40, 60, 80),
+  TrainCosine = c(0.953035435128986, 0.9658987487414616, 0.9725126215678264, 0.9734485608450371, 0.9764318772448843),
+  TestCosine = c(0.948958039358191, 0.9607920528156575, 0.9688225830778758, 0.9686566854381196, 0.97117631129573)
+)
+comp_s1__l2_long <- pivot_longer(comp_s1__l2, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s1__l2_long$Metric <- factor(comp_s1__l2_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l2 <- min(comp_s1__l2_long$Value) - 0.005
+cos_max_l2 <- max(comp_s1__l2_long$Value) + 0.002
+plot_l2 <- ggplot(comp_s1__l2_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l2, cos_max_l2)) +
+  labs(x = 'L1', y = 'Cosine Similarity', title = '2-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#2CA02C', 'Test' = '#D62728')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+grid.arrange(plot_l1, plot_l2, ncol = 2)
+```
+
+## Series 2: Number of L2 Neurons (L1=40)
+
+### Cosine Similarity Comparison
+
+```{r}
+comp_s2_ <- data.frame(
+  NetworkType = c("1-layer", "1-layer", "1-layer", "1-layer", "1-layer", "2-layer", "2-layer", "2-layer", "2-layer"),
+  Param = c(0, 0, 0, 0, 0, 3, 5, 10, 20),
+  TrainCosine = c(0.9822317566724508, 0.9822317566724508, 0.9822317566724508, 0.9822317566724508, 0.9822317566724508, 0.9757243293902033, 0.9725126215678264, 0.968379827941525, 0.9652359529599869),
+  TrainCosineStd = c(0.001198912537499048, 0.001198912537499048, 0.001198912537499048, 0.001198912537499048, 0.001198912537499048, 0.0026123140705422575, 0.004880116431088722, 0.0018634088481776967, 0.00042733685000834713),
+  TestCosine = c(0.9793538821232254, 0.9793538821232254, 0.9793538821232254, 0.9793538821232254, 0.9793538821232254, 0.9741841646282777, 0.9688225830778758, 0.9631451464095317, 0.9570116294466248),
+  TestCosineStd = c(0.0013966583349825687, 0.0013966583349825687, 0.0013966583349825687, 0.0013966583349825687, 0.0013966583349825687, 0.0025750653723899224, 0.004619389450721792, 0.004910715872624815, 0.003142844299520735)
+)
+kable(comp_s2_, digits = 4, caption = 'Comparison: 1-Layer vs 2-Layer Networks')
+```
+
+### Train vs Test: num of L2 neurons
+
+```{r, fig.width=12, fig.height=5}
+
+library(tidyverse)
+
+# --- Dane 1-layer ---
+comp_s2__l1 <- data.frame(
+  Param = c(0, 0, 0, 0, 0),
+  TrainCosine = c(0.9822317566724508, 0.9822317566724508, 0.9822317566724508, 0.9822317566724508, 0.9822317566724508),
+  TestCosine = c(0.9793538821232254, 0.9793538821232254, 0.9793538821232254, 0.9793538821232254, 0.9793538821232254)
+) %>%
+  pivot_longer(cols = c("TrainCosine", "TestCosine"),
+               names_to = "Metric", values_to = "Value") %>%
+  mutate(Metric = factor(Metric, levels = c("TrainCosine", "TestCosine"),
+                         labels = c("Train", "Test")),
+         Network = "1-Layer")
+
+# --- Dane 2-layer ---
+comp_s2__l2 <- data.frame(
+  Param = c(3, 5, 10, 20),
+  TrainCosine = c(0.9757243293902033, 0.9725126215678264, 0.968379827941525, 0.9652359529599869),
+  TestCosine = c(0.9741841646282777, 0.9688225830778758, 0.9631451464095317, 0.9570116294466248)
+) %>%
+  pivot_longer(cols = c("TrainCosine", "TestCosine"),
+               names_to = "Metric", values_to = "Value") %>%
+  mutate(Metric = factor(Metric, levels = c("TrainCosine", "TestCosine"),
+                         labels = c("Train", "Test")),
+         Network = "2-Layer")
+
+# --- Połączenie danych ---
+all_data <- bind_rows(comp_s2__l1, comp_s2__l2)
+
+# --- Wspólne limity osi Y ---
+cos_min <- min(all_data$Value) - 0.005
+cos_max <- max(all_data$Value) + 0.002
+
+# --- Jeden wykres z facetami ---
+plot_combined <- ggplot(all_data, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf("%.4f", Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min, cos_max)) +
+  labs(x = "L2", y = "Cosine Similarity", title = "Porównanie: 1-Layer vs 2-Layer Network") +
+  scale_fill_manual(values = c("Train" = "#1F77B4", "Test" = "#FF7F0E")) +
+  facet_wrap(~ Network) +
+  theme_minimal() +
+  theme(legend.position = "top",
+        plot.title = element_text(size = 12))
+
+plot_combined
+```
+
+## Series 3: Learning Rate (L1=40, L2=5)
+
+### Cosine Similarity Comparison
+
+```{r}
+comp_s3_ <- data.frame(
+  NetworkType = c("1-layer", "1-layer", "1-layer", "1-layer", "2-layer", "2-layer", "2-layer", "2-layer"),
+  Param = c(0.3, 0.5, 0.7, 0.9, 0.3, 0.5, 0.7, 0.9),
+  TrainCosine = c(0.9749660742425054, 0.9788042163529542, 0.9806265991380936, 0.9822317566724508, 0.9557780699352584, 0.964614098471586, 0.9688300222315174, 0.9725126215678264),
+  TrainCosineStd = c(0.003660585419219228, 0.0028458394983485453, 0.0023711147559672186, 0.001198912537499048, 0.010670011732917126, 0.00878409328776093, 0.007916947780710679, 0.004880116431088722),
+  TestCosine = c(0.9719646961070245, 0.975855508849899, 0.9777250021779527, 0.9793538821232254, 0.9494230505871565, 0.9608989897292052, 0.9642725205477058, 0.9688225830778758),
+  TestCosineStd = c(0.003836291101889972, 0.003795052675755671, 0.0024427198975204355, 0.0013966583349825687, 0.012847605380775735, 0.009554461774401219, 0.007726493989612743, 0.004619389450721792)
+)
+kable(comp_s3_, digits = 4, caption = 'Comparison: 1-Layer vs 2-Layer Networks')
+```
+
+### Train vs Test: Learning Rate
+```{r, fig.width=12, fig.height=5}
+
+# 1-Layer Network plot
+comp_s3__l1 <- data.frame(
+  Param = c(0.3, 0.5, 0.7, 0.9),
+  TrainCosine = c(0.9749660742425054, 0.9788042163529542, 0.9806265991380936, 0.9822317566724508),
+  TestCosine = c(0.9719646961070245, 0.975855508849899, 0.9777250021779527, 0.9793538821232254)
+)
+comp_s3__l1_long <- pivot_longer(comp_s3__l1, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s3__l1_long$Metric <- factor(comp_s3__l1_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l1 <- min(comp_s3__l1_long$Value) - 0.005
+cos_max_l1 <- max(comp_s3__l1_long$Value) + 0.002
+plot_l1 <- ggplot(comp_s3__l1_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l1, cos_max_l1)) +
+  labs(x = 'Learning Rate', y = 'Cosine Similarity', title = '1-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#1F77B4', 'Test' = '#FF7F0E')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+# 2-Layer Network plot
+comp_s3__l2 <- data.frame(
+  Param = c(0.3, 0.5, 0.7, 0.9),
+  TrainCosine = c(0.9557780699352584, 0.964614098471586, 0.9688300222315174, 0.9725126215678264),
+  TestCosine = c(0.9494230505871565, 0.9608989897292052, 0.9642725205477058, 0.9688225830778758)
+)
+comp_s3__l2_long <- pivot_longer(comp_s3__l2, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s3__l2_long$Metric <- factor(comp_s3__l2_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l2 <- min(comp_s3__l2_long$Value) - 0.005
+cos_max_l2 <- max(comp_s3__l2_long$Value) + 0.002
+plot_l2 <- ggplot(comp_s3__l2_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l2, cos_max_l2)) +
+  labs(x = 'Learning Rate', y = 'Cosine Similarity', title = '2-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#2CA02C', 'Test' = '#D62728')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+grid.arrange(plot_l1, plot_l2, ncol = 2)
+```
+
+## Series 4: Learning Rate Decay (L1=40, L2=5)
+
+### Cosine Similarity Comparison
+
+```{r}
+comp_s4_ <- data.frame(
+  NetworkType = c("1-layer", "1-layer", "1-layer", "1-layer", "2-layer", "2-layer", "2-layer", "2-layer"),
+  Param = c(0.9, 0.95, 0.98, 0.99, 0.9, 0.95, 0.98, 0.99),
+  TrainCosine = c(0.9811679122287277, 0.9822317566724508, 0.9825497203764704, 0.9822061679099727, 0.9702488407065228, 0.9725126215678264, 0.9745862488681961, 0.9739830877209552),
+  TrainCosineStd = c(0.0020795972481265626, 0.001198912537499048, 0.001451997853521173, 0.0018552937441582433, 0.005500995759704278, 0.004880116431088722, 0.0044047536794092935, 0.004147490580788382),
+  TestCosine = c(0.9785869944764405, 0.9793538821232254, 0.9800675072269736, 0.9802345869223084, 0.9667699233220464, 0.9688225830778758, 0.9695055600677014, 0.9699342144976099),
+  TestCosineStd = c(0.002610596088760459, 0.0013966583349825687, 0.0008375936369264003, 0.0010498372266787561, 0.005502720626172132, 0.004619389450721792, 0.0048102751328981345, 0.0055212116426199415)
+)
+kable(comp_s4_, digits = 4, caption = 'Comparison: 1-Layer vs 2-Layer Networks')
+```
+
+### Train vs Test: Decay
+
+```{r, fig.width=12, fig.height=5}
+
+# 1-Layer Network plot
+comp_s4__l1 <- data.frame(
+  Param = c(0.9, 0.95, 0.98, 0.99),
+  TrainCosine = c(0.9811679122287277, 0.9822317566724508, 0.9825497203764704, 0.9822061679099727),
+  TestCosine = c(0.9785869944764405, 0.9793538821232254, 0.9800675072269736, 0.9802345869223084)
+)
+comp_s4__l1_long <- pivot_longer(comp_s4__l1, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s4__l1_long$Metric <- factor(comp_s4__l1_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l1 <- min(comp_s4__l1_long$Value) - 0.005
+cos_max_l1 <- max(comp_s4__l1_long$Value) + 0.002
+plot_l1 <- ggplot(comp_s4__l1_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l1, cos_max_l1)) +
+  labs(x = 'Decay', y = 'Cosine Similarity', title = '1-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#1F77B4', 'Test' = '#FF7F0E')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+# 2-Layer Network plot
+comp_s4__l2 <- data.frame(
+  Param = c(0.9, 0.95, 0.98, 0.99),
+  TrainCosine = c(0.9702488407065228, 0.9725126215678264, 0.9745862488681961, 0.9739830877209552),
+  TestCosine = c(0.9667699233220464, 0.9688225830778758, 0.9695055600677014, 0.9699342144976099)
+)
+comp_s4__l2_long <- pivot_longer(comp_s4__l2, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s4__l2_long$Metric <- factor(comp_s4__l2_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l2 <- min(comp_s4__l2_long$Value) - 0.005
+cos_max_l2 <- max(comp_s4__l2_long$Value) + 0.002
+plot_l2 <- ggplot(comp_s4__l2_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l2, cos_max_l2)) +
+  labs(x = 'Decay', y = 'Cosine Similarity', title = '2-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#2CA02C', 'Test' = '#D62728')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+grid.arrange(plot_l1, plot_l2, ncol = 2)
+```
+
+## Series 5: Number of Epochs (L1=40, L2=5)
+
+### Cosine Similarity Comparison
+
+```{r}
+comp_s5_ <- data.frame(
+  NetworkType = c("1-layer", "1-layer", "1-layer", "1-layer", "2-layer", "2-layer", "2-layer", "2-layer"),
+  Param = c(50, 100, 200, 500, 50, 100, 200, 500),
+  TrainCosine = c(0.9820952468986244, 0.9822317566724508, 0.9823039671109308, 0.9825232294629945, 0.972691230532288, 0.9725126215678264, 0.971919529164538, 0.9724331035063679),
+  TrainCosineStd = c(0.001509252405197125, 0.001198912537499048, 0.0011619324719936738, 0.0011145802653046886, 0.004208638633724682, 0.004880116431088722, 0.004591194759859711, 0.0045120538349229045),
+  TestCosine = c(0.9788765497794343, 0.9793538821232254, 0.9795301541201805, 0.9795871284556308, 0.9691447836109855, 0.9688225830778758, 0.9669036387880137, 0.9680942768812736),
+  TestCosineStd = c(0.001710465133733503, 0.0013966583349825687, 0.0011603883282752848, 0.0011252771286451684, 0.004946237997469879, 0.004619389450721792, 0.00567029457546645, 0.005407582755238717)
+)
+kable(comp_s5_, digits = 4, caption = 'Comparison: 1-Layer vs 2-Layer Networks')
+```
+
+### Train vs Test: num of Epochs
+
+```{r, fig.width=12, fig.height=5}
+
+# 1-Layer Network plot
+comp_s5__l1 <- data.frame(
+  Param = c(50, 100, 200, 500),
+  TrainCosine = c(0.9820952468986244, 0.9822317566724508, 0.9823039671109308, 0.9825232294629945),
+  TestCosine = c(0.9788765497794343, 0.9793538821232254, 0.9795301541201805, 0.9795871284556308)
+)
+comp_s5__l1_long <- pivot_longer(comp_s5__l1, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s5__l1_long$Metric <- factor(comp_s5__l1_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l1 <- min(comp_s5__l1_long$Value) - 0.005
+cos_max_l1 <- max(comp_s5__l1_long$Value) + 0.002
+plot_l1 <- ggplot(comp_s5__l1_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l1, cos_max_l1)) +
+  labs(x = 'Epochs', y = 'Cosine Similarity', title = '1-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#1F77B4', 'Test' = '#FF7F0E')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+# 2-Layer Network plot
+comp_s5__l2 <- data.frame(
+  Param = c(50, 100, 200, 500),
+  TrainCosine = c(0.972691230532288, 0.9725126215678264, 0.971919529164538, 0.9724331035063679),
+  TestCosine = c(0.9691447836109855, 0.9688225830778758, 0.9669036387880137, 0.9680942768812736)
+)
+comp_s5__l2_long <- pivot_longer(comp_s5__l2, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s5__l2_long$Metric <- factor(comp_s5__l2_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l2 <- min(comp_s5__l2_long$Value) - 0.005
+cos_max_l2 <- max(comp_s5__l2_long$Value) + 0.002
+plot_l2 <- ggplot(comp_s5__l2_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l2, cos_max_l2)) +
+  labs(x = 'Epochs', y = 'Cosine Similarity', title = '2-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#2CA02C', 'Test' = '#D62728')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+grid.arrange(plot_l1, plot_l2, ncol = 2)
+```
+
+## Series 6: Different Activation Functions (L1=40, L2=5)
+
+### Cosine Similarity Comparison
+
+```{r}
+comp_s6_ <- data.frame(
+  NetworkType = c("2-layer", "2-layer", "2-layer", "2-layer"),
+  Param = c("gaussian", "sigmoid", "inverse", "inverse_sq"),
+  TrainCosine = c(0.9725126215678264, 0.9407663691725542, 0.9609917118496938, 0.9757791393953804),
+  TrainCosineStd = c(0.004880116431088722, 0.008298722680032216, 0.008254124834658065, 0.0034871597353164398),
+  TestCosine = c(0.9688225830778758, 0.9313013367729901, 0.9548381684989804, 0.9723085107918615),
+  TestCosineStd = c(0.004619389450721792, 0.010725546913412114, 0.003931906304036506, 0.003841528623711355)
+)
+kable(comp_s6_, digits = 4, caption = 'Comparison: 1-Layer vs 2-Layer Networks')
+```
+
+### Train vs Test: Activation func
+
+```{r, fig.width=12, fig.height=5}
+
+# 2-Layer Network plot
+comp_s6__l2 <- data.frame(
+  Param = c("gaussian", "sigmoid", "inverse", "inverse_sq"),
+  TrainCosine = c(0.9725126215678264, 0.9407663691725542, 0.9609917118496938, 0.9757791393953804),
+  TestCosine = c(0.9688225830778758, 0.9313013367729901, 0.9548381684989804, 0.9723085107918615)
+)
+comp_s6__l2_long <- pivot_longer(comp_s6__l2, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s6__l2_long$Metric <- factor(comp_s6__l2_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l2 <- min(comp_s6__l2_long$Value) - 0.005
+cos_max_l2 <- max(comp_s6__l2_long$Value) + 0.002
+plot_l2 <- ggplot(comp_s6__l2_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l2, cos_max_l2)) +
+  labs(x = 'Activation', y = 'Cosine Similarity', title = '2-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#2CA02C', 'Test' = '#D62728')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+plot_l2
+```
+
+## Series 7: Train Ratio (L1=40, L2=5)
+
+### Cosine Similarity Comparison
+
+```{r}
+comp_s7_ <- data.frame(
+  NetworkType = c("1-layer", "1-layer", "1-layer", "1-layer", "2-layer", "2-layer", "2-layer", "2-layer"),
+  Param = c(0.6, 0.7, 0.8, 0.9, 0.6, 0.7, 0.8, 0.9),
+  TrainCosine = c(0.9813781171786806, 0.9817430460220166, 0.9822317566724508, 0.9830797038326207, 0.970572534707909, 0.9708884720234094, 0.9725126215678264, 0.9737937694915224),
+  TrainCosineStd = c(0.0013111513950246115, 0.0006267324991287443, 0.001198912537499048, 0.000927164056463407, 0.0036571690426095496, 0.002734583360721818, 0.004880116431088722, 0.0026744810945581463),
+  TestCosine = c(0.9788511147528764, 0.9797963572003627, 0.9793538821232254, 0.9788229829124377, 0.966323415608316, 0.9680132534363384, 0.9688225830778758, 0.9664879053171285),
+  TestCosineStd = c(0.0012336064802417302, 0.0005586326013888064, 0.0013966583349825687, 0.0011384580809499373, 0.004520288639583969, 0.003370635480825373, 0.004619389450721792, 0.0019000570351609869)
+)
+kable(comp_s7_, digits = 4, caption = 'Comparison: 1-Layer vs 2-Layer Networks')
+```
+
+### Train vs Test Cosine Similarity (Side by Side)
+
+```{r, fig.width=12, fig.height=5}
+
+# 1-Layer Network plot
+comp_s7__l1 <- data.frame(
+  Param = c(0.6, 0.7, 0.8, 0.9),
+  TrainCosine = c(0.9813781171786806, 0.9817430460220166, 0.9822317566724508, 0.9830797038326207),
+  TestCosine = c(0.9788511147528764, 0.9797963572003627, 0.9793538821232254, 0.9788229829124377)
+)
+comp_s7__l1_long <- pivot_longer(comp_s7__l1, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s7__l1_long$Metric <- factor(comp_s7__l1_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l1 <- min(comp_s7__l1_long$Value) - 0.005
+cos_max_l1 <- max(comp_s7__l1_long$Value) + 0.002
+plot_l1 <- ggplot(comp_s7__l1_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l1, cos_max_l1)) +
+  labs(x = 'Train Ratio', y = 'Cosine Similarity', title = '1-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#1F77B4', 'Test' = '#FF7F0E')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+# 2-Layer Network plot
+comp_s7__l2 <- data.frame(
+  Param = c(0.6, 0.7, 0.8, 0.9),
+  TrainCosine = c(0.970572534707909, 0.9708884720234094, 0.9725126215678264, 0.9737937694915224),
+  TestCosine = c(0.966323415608316, 0.9680132534363384, 0.9688225830778758, 0.9664879053171285)
+)
+comp_s7__l2_long <- pivot_longer(comp_s7__l2, cols = c('TrainCosine', 'TestCosine'), names_to = 'Metric', values_to = 'Value')
+comp_s7__l2_long$Metric <- factor(comp_s7__l2_long$Metric, levels = c('TrainCosine', 'TestCosine'), labels = c('Train', 'Test'))
+cos_min_l2 <- min(comp_s7__l2_long$Value) - 0.005
+cos_max_l2 <- max(comp_s7__l2_long$Value) + 0.002
+plot_l2 <- ggplot(comp_s7__l2_long, aes(x = factor(Param), y = Value, fill = Metric)) +
+  geom_col(position = position_dodge(width = 0.7), width = 0.6) +
+  geom_text(aes(label = sprintf('%.4f', Value)),
+            position = position_dodge(width = 0.7), vjust = -0.5, size = 3) +
+  coord_cartesian(ylim = c(cos_min_l2, cos_max_l2)) +
+  labs(x = 'Train Ratio', y = 'Cosine Similarity', title = '2-Layer Network') +
+  scale_fill_manual(values = c('Train' = '#2CA02C', 'Test' = '#D62728')) +
+  theme_minimal() +
+  theme(legend.position = 'top', plot.title = element_text(size = 10))
+
+grid.arrange(plot_l1, plot_l2, ncol = 2)
+```
+
+## Best Configuration
+
+**Name:** S1_E: gaussian, lr=0.9 (1-layer)
+
+- Number of layers: 1
+- Number of neurons (L1): 80
+- Activation function: gaussian
+- Learning rate: 0.9
+- Learning rate decay: 0.95
+- Number of epochs: 100
+- Train ratio: 0.8
+- Train Cosine: 0.9843 +/- 0.0008
+- Test Cosine: 0.9813 +/- 0.0008
+
+## Przegląd literatury
+
+● Sieci neuronowe’’
+Tadeusiewicz omawia matematyczne podstawy uczenia sieci neuronowych, przedstawiając
+uczenie bez nadzoru oparte na regule Hebba i jej modyfikacji Grossberga („instar”). Analizuje
+też algorytmy rywalizacyjne Kohonena, podkreślając ich związki z regułą Hebba oraz różnice,
+takie jak aktualizacja wag tylko neuronu zwycięskiego i normalizacja wektorów wagowych.
+● ,Multi-layer Hebbian networks with modern deep learning frameworks’’ (Thomas Miconi)
+Celem jest pokazanie, że reguły Hebba, Instar Grossberga i Oji można wdrożyć w
+nowoczesnych frameworkach deep learning bez specjalnych modyfikacji
+● ,,Review of stability properties of neural plasticity rules for implementation on
+memristive neuromorphic hardware’’ ( Anatoli Gorchetchnikov)
+Artykuł analizuje stabilność reguł plastyczności synaptycznej w neuromorficznych systemach
+opartych na memrystorach. Omawia trzy klasy: Hebbian learning, reguły progowe (np. BCM
+theory) oraz czasowe (np. Temporal Difference learning), wskazując, że wiele z nich jest
+niestabilnych.
+Wyróżnia się reguła instar, która zapewnia stabilną konwergencję wag i skutecznie
+odwzorowuje wzorce wejściowe, co czyni ją szczególnie użyteczną w praktyce.
+
+## Bibliografia
+
+● Gorchetchnikov Anatoli i in., Review of stability properties of neural
+plasticity rules for implementation on memristive neuromorphic
+hardware, 2011;
+● Miconi Thomas, Multi-layer Hebbian networks with modern deep
+learning frameworks, 2021;
+● Pedregosa Fabian i in., Scikit‑learn: Machine Learning in Python,
+2011;
+● Tadeusiewicz Ryszard, Sieci neuronowe, 1993;

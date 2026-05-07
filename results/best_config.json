@@ -1,0 +1,17 @@
+{
+  "config": "S1_E: gaussian, lr=0.9 (1-layer)",
+  "network_type": "1-layer",
+  "n_layers": 1,
+  "n_neurons_l1": 80,
+  "n_neurons_l2": 0,
+  "n_neurons": 80,
+  "activation": "gaussian",
+  "eta_init": 0.9,
+  "eta_decay": 0.95,
+  "epochs": 100,
+  "train_ratio": 0.8,
+  "TrainCosine": 0.9843148810796073,
+  "TrainCosineStd": 0.0007600855015428451,
+  "TestCosine": 0.9812642590045109,
+  "TestCosineStd": 0.000779508918469242
+}
