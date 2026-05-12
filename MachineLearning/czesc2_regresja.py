@@ -7,6 +7,12 @@ from sklearn.ensemble import RandomForestRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
+from sklearn.neighbors import KNeighborsRegressor
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVR
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score
+
 # 1. PRZYGOTOWANIE DANYCH (Na podstawie struktury opisanej w projekt_neur.docx i wynikach testów)
 # Ponieważ mamy korzystać z rezultatów, symulujemy zbiór danych wejściowych, 
 # który był użyty do wygenerowania wyników w pliku Rmd i best_config_summary.
@@ -128,6 +134,134 @@ plt.xticks(rotation=15)
 
 plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 plt.suptitle('Analiza porównawcza modeli - Metryki z punktu 4.2', fontsize=16)
+plt.show()
+
+# 3. BADANIE KNN REGRESSOR (Parametr: liczba sąsiadów)
+
+neighbors = [3, 5, 7, 9]
+
+print("Testowanie KNN Regressor dla różnych wartości n_neighbors...")
+
+for k in neighbors:
+
+    model = KNeighborsRegressor(n_neighbors=k)
+
+    model.fit(X_train, y_train)
+
+    preds = model.predict(X_test)
+
+    all_ml_results.append({
+        'Model': f'KNN (k={k})',
+        'MAE': mean_absolute_error(y_test, preds),
+        'RMSE': np.sqrt(mean_squared_error(y_test, preds)),
+        'sMAPE': smape(y_test, preds),
+        'R2': r2_score(y_test, preds)
+    })
+
+
+# 4. BADANIE SVR (Parametr: kernel)
+
+kernels = ['linear', 'rbf', 'poly', 'sigmoid']
+
+print("Testowanie SVR dla różnych kerneli...")
+
+for ker in kernels:
+
+    model = SVR(kernel=ker)
+
+    model.fit(X_train, y_train)
+
+    preds = model.predict(X_test)
+
+    all_ml_results.append({
+        'Model': f'SVR ({ker})',
+        'MAE': mean_absolute_error(y_test, preds),
+        'RMSE': np.sqrt(mean_squared_error(y_test, preds)),
+        'sMAPE': smape(y_test, preds),
+        'R2': r2_score(y_test, preds)
+    })
+
+
+# KLASYFIKACJA
+
+print("\n--- CZĘŚĆ KLASYFIKACYJNA ---")
+
+# Tworzenie klas na podstawie mediany targetu
+y_class = (y > y.median()).astype(int)
+
+X_train_c, X_test_c, y_train_c, y_test_c = train_test_split(
+    X,
+    y_class,
+    test_size=0.2,
+    random_state=42
+)
+
+classification_results = []
+
+# KNN CLASSIFIER
+neighbors_cls = [3, 5, 7, 9]
+
+print("Testowanie KNN Classifier...")
+
+for k in neighbors_cls:
+
+    clf = KNeighborsClassifier(n_neighbors=k)
+
+    clf.fit(X_train_c, y_train_c)
+    preds = clf.predict(X_test_c)
+
+    classification_results.append({
+        'Model': f'KNN Classifier (k={k})',
+        'Accuracy': accuracy_score(y_test_c, preds)
+    })
+
+
+# RANDOM FOREST CLASSIFIER
+
+estimators_cls = [10, 50, 100, 200]
+
+print("Testowanie Random Forest Classifier...")
+
+for n in estimators_cls:
+
+    clf = RandomForestClassifier(
+        n_estimators=n,
+        random_state=42
+    )
+
+    clf.fit(X_train_c, y_train_c)
+
+    preds = clf.predict(X_test_c)
+
+    classification_results.append({
+        'Model': f'RF Classifier (n={n})',
+        'Accuracy': accuracy_score(y_test_c, preds)
+    })
+
+
+# Tabela klasyfikacji
+
+classification_df = pd.DataFrame(classification_results)
+
+print("\nTabela wyników klasyfikacji")
+print(classification_df.round(3).to_string(index=False))
+
+
+# WYKRES KLASYFIKACJI
+
+plt.figure(figsize=(12,6))
+
+sns.barplot(
+    x='Model',
+    y='Accuracy',
+    data=classification_df,
+    palette='viridis'
+)
+
+plt.title('Porównanie modeli klasyfikacyjnych')
+plt.xticks(rotation=20)
+
+plt.tight_layout()
 plt.show()
 
 # 6. WNIOSKI DO RAPORTU (Inspirowane wzorcem)
