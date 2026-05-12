@@ -1,0 +1,208 @@
+======================================================================
+OPIS WYBRANYCH METOD UCZENIA MASZYNOWEGO (nienadzorowane)
+======================================================================
+
+1. K-Means
+   - Grupuje dane w k klastrów na podstawie odległości euklidesowej
+   - Parametry: liczba klastrów (k), inicjalizacja
+
+2. DBSCAN
+   - Gęstościowa metoda klasterowania, wykrywa outlierów
+   - Parametry: promień sąsiedztwa (eps), minimalna liczba punktów (min_samples)
+
+3. Klasterowanie Aglomeracyjne
+   - Hierarchiczne łączenie punktów w klastry
+   - Parametry: liczba klastrów, rodzaj połączenia (linkage)
+
+4. GMM (Gaussian Mixture Model)
+   - Probabilistyczne klasterowanie – każdy klaster to rozkład Gaussa
+   - Parametry: liczba komponentów, typ kowariancji
+
+Dodatkowo – zadanie regresji:
+5. KNN Regressor – przewidywanie wartości ciągłej na podstawie k sąsiadów
+6. Decision Tree Regressor – drzewo regresyjne
+7. Random Forest Regressor – las losowy regresyjny
+8. SVR – maszyna wektorów nośnych do regresji
+
+Loaded 2277 samples from cache
+[*] Wczytano 2277 spółek, 14 cech.
+  Brak danych SOM – pominięto porównanie
+
+======================================================================
+KLASTEROWANIE NIENADZOROWANE
+======================================================================
+
+>>> K-Means
+  k=2 -> Silhouette=0.9702, Cosine=0.0235, DBI=0.0229
+  k=3 -> Silhouette=0.5689, Cosine=0.8059, DBI=0.4778
+  k=4 -> Silhouette=0.5721, Cosine=0.8065, DBI=0.3610
+  k=5 -> Silhouette=0.5752, Cosine=0.8070, DBI=0.2908
+  k=6 -> Silhouette=0.5782, Cosine=0.8076, DBI=0.2439
+
+>>> DBSCAN
+  eps=0.5 -> Silhouette=0.3792, Cosine=0.9068, klastry=7, noise=24
+  eps=1.0 -> Silhouette=0.0102, Cosine=0.3297, klastry=5, noise=5
+  eps=1.5 -> Silhouette=-1.0000, Cosine=0.0000, klastry=1, noise=5
+  eps=2.0 -> Silhouette=-1.0000, Cosine=0.0000, klastry=1, noise=5
+  eps=3.0 -> Silhouette=-1.0000, Cosine=0.0000, klastry=1, noise=5
+
+>>> Klasterowanie Aglomeracyjne
+  linkage=ward     k=2 -> Silhouette=0.9702, Cosine=0.0235, DBI=0.0229
+  linkage=complete k=2 -> Silhouette=0.9702, Cosine=0.0235, DBI=0.0229
+  linkage=average  k=2 -> Silhouette=0.9702, Cosine=0.0235, DBI=0.0229
+  linkage=single   k=2 -> Silhouette=0.9702, Cosine=0.0235, DBI=0.0229
+  linkage=ward     k=3 -> Silhouette=0.5337, Cosine=0.7680, DBI=0.5365
+  linkage=complete k=3 -> Silhouette=0.9345, Cosine=0.0263, DBI=0.0414
+  linkage=average  k=3 -> Silhouette=0.9345, Cosine=0.0263, DBI=0.0414
+  linkage=single   k=3 -> Silhouette=0.9345, Cosine=0.0263, DBI=0.0414
+  linkage=ward     k=4 -> Silhouette=0.5369, Cosine=0.7685, DBI=0.4058
+  linkage=complete k=4 -> Silhouette=0.9346, Cosine=0.0288, DBI=0.0434
+  linkage=average  k=4 -> Silhouette=0.9346, Cosine=0.0288, DBI=0.0434
+  linkage=single   k=4 -> Silhouette=0.9332, Cosine=0.0288, DBI=0.0440
+  linkage=ward     k=5 -> Silhouette=0.5401, Cosine=0.7690, DBI=0.3272
+  linkage=complete k=5 -> Silhouette=0.9335, Cosine=0.0311, DBI=0.0449
+  linkage=average  k=5 -> Silhouette=0.9335, Cosine=0.0311, DBI=0.0449
+  linkage=single   k=5 -> Silhouette=0.9335, Cosine=0.0311, DBI=0.0449
+  linkage=ward     k=6 -> Silhouette=0.5432, Cosine=0.7696, DBI=0.2748
+  linkage=complete k=6 -> Silhouette=0.5432, Cosine=0.7696, DBI=0.2748
+  linkage=average  k=6 -> Silhouette=0.4702, Cosine=0.0322, DBI=0.1738
+  linkage=single   k=6 -> Silhouette=0.4702, Cosine=0.0322, DBI=0.1738
+
+>>> GMM (Gaussian Mixture Model)
+  cov=full     k=2 -> Silhouette=0.9702, Cosine=0.0235, DBI=0.0229
+  cov=diag     k=2 -> Silhouette=0.9702, Cosine=0.0235, DBI=0.0229
+  cov=tied     k=2 -> Silhouette=0.9702, Cosine=0.0235, DBI=0.0229
+  cov=spherical k=2 -> Silhouette=0.9702, Cosine=0.0235, DBI=0.0229
+  cov=full     k=3 -> Silhouette=0.6208, Cosine=0.0420, DBI=1.9688
+  cov=diag     k=3 -> Silhouette=0.6567, Cosine=0.0394, DBI=1.9523
+  cov=tied     k=3 -> Silhouette=0.5656, Cosine=0.8013, DBI=0.4947
+  cov=spherical k=3 -> Silhouette=0.4218, Cosine=0.5934, DBI=0.4527
+  cov=full     k=4 -> Silhouette=0.5578, Cosine=0.8584, DBI=0.6707
+  cov=diag     k=4 -> Silhouette=0.5636, Cosine=0.7980, DBI=1.7959
+  cov=tied     k=4 -> Silhouette=0.5379, Cosine=0.8382, DBI=0.6904
+  cov=spherical k=4 -> Silhouette=0.4378, Cosine=0.6784, DBI=0.9702
+  cov=full     k=5 -> Silhouette=0.5553, Cosine=0.8590, DBI=0.5150
+  cov=diag     k=5 -> Silhouette=0.5672, Cosine=0.7999, DBI=1.4917
+  cov=tied     k=5 -> Silhouette=0.5303, Cosine=0.8391, DBI=0.5176
+  cov=spherical k=5 -> Silhouette=0.3867, Cosine=0.6705, DBI=0.6008
+  cov=full     k=6 -> Silhouette=0.4883, Cosine=0.8397, DBI=1.1059
+  cov=diag     k=6 -> Silhouette=0.5587, Cosine=0.8666, DBI=1.5076
+  cov=tied     k=6 -> Silhouette=0.4944, Cosine=0.8529, DBI=0.5802
+  cov=spherical k=6 -> Silhouette=0.2958, Cosine=0.6696, DBI=0.6578
+
+--- Tabela zbiorcza klasterowania ---
+              Model  Silhouette  Cosine     DBI
+         KMeans k=2      0.9702  0.0235  0.0229
+         KMeans k=3      0.5689  0.8059  0.4778
+         KMeans k=4      0.5721  0.8065  0.3610
+         KMeans k=5      0.5752  0.8070  0.2908
+         KMeans k=6      0.5782  0.8076  0.2439
+     DBSCAN eps=0.5      0.3792  0.9068  2.4988
+     DBSCAN eps=1.0      0.0102  0.3297  1.7623
+     DBSCAN eps=1.5     -1.0000  0.0000 -1.0000
+     DBSCAN eps=2.0     -1.0000  0.0000 -1.0000
+     DBSCAN eps=3.0     -1.0000  0.0000 -1.0000
+    Agglom ward k=2      0.9702  0.0235  0.0229
+Agglom complete k=2      0.9702  0.0235  0.0229
+ Agglom average k=2      0.9702  0.0235  0.0229
+  Agglom single k=2      0.9702  0.0235  0.0229
+    Agglom ward k=3      0.5337  0.7680  0.5365
+Agglom complete k=3      0.9345  0.0263  0.0414
+ Agglom average k=3      0.9345  0.0263  0.0414
+  Agglom single k=3      0.9345  0.0263  0.0414
+    Agglom ward k=4      0.5369  0.7685  0.4058
+Agglom complete k=4      0.9346  0.0288  0.0434
+ Agglom average k=4      0.9346  0.0288  0.0434
+  Agglom single k=4      0.9332  0.0288  0.0440
+    Agglom ward k=5      0.5401  0.7690  0.3272
+Agglom complete k=5      0.9335  0.0311  0.0449
+ Agglom average k=5      0.9335  0.0311  0.0449
+  Agglom single k=5      0.9335  0.0311  0.0449
+    Agglom ward k=6      0.5432  0.7696  0.2748
+Agglom complete k=6      0.5432  0.7696  0.2748
+ Agglom average k=6      0.4702  0.0322  0.1738
+  Agglom single k=6      0.4702  0.0322  0.1738
+       GMM full k=2      0.9702  0.0235  0.0229
+       GMM diag k=2      0.9702  0.0235  0.0229
+       GMM tied k=2      0.9702  0.0235  0.0229
+  GMM spherical k=2      0.9702  0.0235  0.0229
+       GMM full k=3      0.6208  0.0420  1.9688
+       GMM diag k=3      0.6567  0.0394  1.9523
+       GMM tied k=3      0.5656  0.8013  0.4947
+  GMM spherical k=3      0.4218  0.5934  0.4527
+       GMM full k=4      0.5578  0.8584  0.6707
+       GMM diag k=4      0.5636  0.7980  1.7959
+       GMM tied k=4      0.5379  0.8382  0.6904
+  GMM spherical k=4      0.4378  0.6784  0.9702
+       GMM full k=5      0.5553  0.8590  0.5150
+       GMM diag k=5      0.5672  0.7999  1.4917
+       GMM tied k=5      0.5303  0.8391  0.5176
+  GMM spherical k=5      0.3867  0.6705  0.6008
+       GMM full k=6      0.4883  0.8397  1.1059
+       GMM diag k=6      0.5587  0.8666  1.5076
+       GMM tied k=6      0.4944  0.8529  0.5802
+  GMM spherical k=6      0.2958  0.6696  0.6578
+
+======================================================================
+PORÓWNANIE ZGODNOŚCI MIĘDZY METODAMI (ARI)
+======================================================================
+
+==================================================
+PODSUMOWANIE
+==================================================
+Liczba spółek: 2277
+Liczba cech: 14
+Najlepsza metoda (Silhouette): KMeans k=2 (0.9702, Cosine=0.0235)
+
+======================================================================
+REGRESJA – odległość spółki od centroidu klastra
+======================================================================
+
+>>> KNN Regressor (n_neighbors)
+  n_neighbors=1            -> R2=0.1282, MAE=0.13
+  n_neighbors=3            -> R2=0.1252, MAE=0.13
+  n_neighbors=5            -> R2=0.1174, MAE=0.13
+  n_neighbors=10           -> R2=0.1166, MAE=0.14
+  n_neighbors=15           -> R2=0.1140, MAE=0.15
+
+>>> DT Regressor (max_depth)
+  max_depth=3            -> R2=-0.9817, MAE=0.44
+  max_depth=5            -> R2=-0.6809, MAE=0.31
+  max_depth=10           -> R2=-0.9540, MAE=0.26
+  max_depth=15           -> R2=-0.6742, MAE=0.22
+  max_depth=20           -> R2=-0.9123, MAE=0.25
+
+>>> RF Regressor (n_estimators)
+  n_estimators=10           -> R2=0.4327, MAE=0.16
+  n_estimators=50           -> R2=0.4378, MAE=0.17
+  n_estimators=100          -> R2=0.4475, MAE=0.17
+  n_estimators=200          -> R2=0.4568, MAE=0.17
+  n_estimators=500          -> R2=0.4465, MAE=0.17
+
+>>> SVR (kernel)
+  kernel=linear       -> R2=0.0497, MAE=0.49
+  kernel=poly         -> R2=-3.5553, MAE=0.54
+  kernel=rbf          -> R2=0.0881, MAE=0.23
+  kernel=sigmoid      -> R2=-19.3711, MAE=6.09
+
+--- Tabela zbiorcza: odległość spółki od centroidu klastra ---
+      Model  MAE  RMSE       R2
+      KNN 1 0.13  2.06   0.1282
+      KNN 3 0.13  2.06   0.1252
+      KNN 5 0.13  2.07   0.1174
+     KNN 10 0.14  2.07   0.1166
+     KNN 15 0.15  2.07   0.1140
+       DT 3 0.44  3.10  -0.9817
+       DT 5 0.31  2.86  -0.6809
+      DT 10 0.26  3.08  -0.9540
+      DT 15 0.22  2.85  -0.6742
+      DT 20 0.25  3.05  -0.9123
+      RF 10 0.16  1.66   0.4327
+      RF 50 0.17  1.65   0.4378
+     RF 100 0.17  1.64   0.4475
+     RF 200 0.17  1.62   0.4568
+     RF 500 0.17  1.64   0.4465
+ SVR linear 0.49  2.15   0.0497
+   SVR poly 0.54  4.70  -3.5553
+    SVR rbf 0.23  2.10   0.0881
+SVR sigmoid 6.09  9.95 -19.3711
